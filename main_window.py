@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
+
+from generation_window import GenerationWindow
 from sr_window import SuperResolutionWindow
 from seg_window import SegmentationWindow
+
 
 class MainWindow:
     def __init__(self, root, name):
@@ -16,8 +19,9 @@ class MainWindow:
         # Create button for the Segmentation
         ttk.Button(self.root, text="Abdominal Organ Segmentation", command=self.__get_seg_window).pack()
 
-        self.root.mainloop()
+        ttk.Button(self.root, text="Contrast-Generation", command=self.__get_generation_window).pack()
 
+        self.root.mainloop()
 
     def __get_sr_window(self):
         """Create a new top level window"""
@@ -26,3 +30,8 @@ class MainWindow:
     def __get_seg_window(self):
         """Create a new top level window"""
         self.segmentation_window = SegmentationWindow(tk.Toplevel(), "Abdominal Organ Segmentation")
+
+    def __get_generation_window(self):
+        """Create a new top level window"""
+        self.contrast_generation_window = GenerationWindow(tk.Toplevel(), "Contrast-Generation")
+
