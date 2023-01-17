@@ -12,9 +12,11 @@ import os
 import pydicom
 import pdb
 import matplotlib.pyplot as plt
+from pathlib import Path
+import cv2 as cv
 
 
-class SuperResolutionWindow:
+class SegmentationWindow:
     def __init__(self, window, window_title):
 
         self.window = window
@@ -24,59 +26,36 @@ class SuperResolutionWindow:
         self.settings_window_created = False
 
         self.window.title(window_title)
-        self.window.minsize(1000, 350)
+        self.window.minsize(700, 150)
         self.window.resizable(False, False)
-
-        # Select SR scale.
-
-        self.label_scale = Label(window, text="Select resolution scale:", font='Arial 12')
-        self.label_scale.place(relx=0.05, rely=0.05)
-        self.resolution_scale = StringVar(window, "2")
-        iter = 0
-        value_scale_dict = {"X2": 2, "X4": 4}
-        for (text, value) in value_scale_dict.items():
-            iter += 0.05
-            Radiobutton(window, text=text, variable=self.resolution_scale,
-                        value=value).place(relx=0.2 + iter, rely=0.05)
-
-        # Select dicom type.
-        self.label_type = Label(window, text="Select image type:", font='Arial 12')
-        self.label_type.place(relx=0.05, rely=0.15)
-        self.img_type = StringVar(window, "CT")
-        iter = 0
-        value_scale_dict = {"CT": "CT", "MRI": "MRI"}
-        for (text, value) in value_scale_dict.items():
-            iter += 0.05
-            Radiobutton(window, text=text, variable=self.img_type,
-                        value=value).place(relx=0.2 + iter, rely=0.15)
 
         # Folder input folder.
         self.label_folder_imgs = Label(window, text="Processing folder with scans:", fg="black", font='Arial 12')
-        self.label_folder_imgs.place(relx=0.05, rely=0.25)
+        self.label_folder_imgs.place(relx=0.05, rely=0.05)
         self.label_folder_imgs_path = Label(window, text="", fg="black")
-        self.label_folder_imgs_path.place(relx=0.3, rely=0.25)
+        self.label_folder_imgs_path.place(relx=0.35, rely=0.06)
         fct_folder_imgs = partial(self.select_folder, self.label_folder_imgs_path)
         self.button_folder = Button(window, text="Browse folder", command=fct_folder_imgs)
-        self.button_folder.place(relx=0.05, rely=0.32)
+        self.button_folder.place(relx=0.05, rely=0.2)
 
         # Folder output folder.
         self.label_saving_folder = Label(window, text="Saving folder:", font='Arial 12')
-        self.label_saving_folder.place(relx=0.05, rely=0.4)
+        self.label_saving_folder.place(relx=0.05, rely=0.35)
         self.label_saving_folder_path = Label(window, text="")
-        self.label_saving_folder_path.place(relx=0.3, rely=0.4)
+        self.label_saving_folder_path.place(relx=0.35, rely=0.36)
         fct_folder_save = partial(self.select_folder, self.label_saving_folder_path)
         self.button_saving_folder = Button(window, text="Browse folder", command=fct_folder_save)
-        self.button_saving_folder.place(relx=0.05, rely=0.47)
+        self.button_saving_folder.place(relx=0.05, rely=0.51)
 
         self.counter = 0
         self.processing_thread = None
 
         self.label_processing = Label(window, text="",  fg="black")
-        self.label_processing.place(relx=0.42, rely=0.86)
+        self.label_processing.place(relx=0.42, rely=0.7)
 
         self.button_start_processing = Button(window, text="Start process", font='Arial 11',
                                                       command=self.__start_processing)
-        self.button_start_processing.place(relx=0.3, rely=0.85)
+        self.button_start_processing.place(relx=0.3, rely=0.75)
         self.stop_thread = False
         self.__shown_text = ""
         self.__num_of_processing_images = 0
@@ -84,14 +63,11 @@ class SuperResolutionWindow:
 
         def on_closing():
             self.stop_thread = True
-            self.window.grab_release() # Release the main.
+            self.window.grab_release()  # Release the main.
             self.window.destroy()
 
         # load network in memory
-        self.model_ct_x2 = onnxruntime.InferenceSession(os.path.join("resources_sr", "CT_x2_single.onnx"))
-        self.model_ct_x4 = onnxruntime.InferenceSession(os.path.join("resources_sr", "CT_x4_single.onnx"))
-        self.model_mri_x2 = onnxruntime.InferenceSession(os.path.join("resources_sr", "MRI_x2_single.onnx"))
-        self.model_mri_x4 = onnxruntime.InferenceSession(os.path.join("resources_sr", "MRI_x4_single.onnx"))
+        self.model_seg_resnet = onnxruntime.InferenceSession(os.path.join("resources_sr", "segmentation_resnet.onnx"))
 
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
@@ -109,27 +85,39 @@ class SuperResolutionWindow:
 
         self.window.after(1000, self.__update)
 
-    def __run_network(self, model, img):
-        lr = np.expand_dims(img, axis=(0, 1))
+    def get_img_from_pixels(self, pixels):
+        pixels = cv.resize(pixels, (300, 300))
+        shape0 = np.array(pixels.shape[:2])
+        resize = np.array([320, 384])
+        if np.any(shape0 != resize):
+            diff = resize - shape0
+            pad0 = diff[0]
+            pad1 = diff[1]
+            pady = [pad0 // 2, pad0 // 2 + pad0 % 2]
+            padx = [pad1 // 2, pad1 // 2 + pad1 % 2]
+            pixels = np.pad(pixels, [pady, padx])
+            pixels = pixels.reshape((resize[0], resize[1]))
+
+        img = np.float32(pixels) / pixels.max()
+        img = np.dstack((img, img, img))
+        img = img.transpose((2, 0, 1))
+        return img
+
+    def __run_network(self, model, pixels):
+        img = self.get_img_from_pixels(pixels)
+        lr = np.expand_dims(img, axis=(0))
 
         lr = np.float32(lr)
         # compute ONNX Runtime output prediction
         ort_inputs = {model.get_inputs()[0].name: lr}
         ort_outs = model.run(None, ort_inputs)
-
-        return ort_outs[0][0, 0]
+        seg = (ort_outs[0][0].transpose((1, 2, 0)) > 0) * 255
+        return seg
 
     def __read_CT(self, dicom_path: str):
         dicom = pydicom.dcmread(dicom_path)
-        intercept = int(dicom[0x28, 0x1052].value)
         pixels = dicom.pixel_array
-        padding = -2000
-        padding_location = np.where(pixels == padding)
-        pixels[pixels == padding] = 0
-
-        pixels = pixels + intercept
-        pixels = pixels / 1000
-        return dicom, pixels, padding_location, intercept
+        return pixels
 
     def __read_MRI(self, dicom_path: str):
         dicom = pydicom.dcmread(dicom_path)
@@ -142,54 +130,30 @@ class SuperResolutionWindow:
 
         return pixels
 
-    def run_sr(self, file_path: str, scale: int, img_type: str):
+    def run_seg(self, file_path: str):
         try:
-            if img_type == 'CT':
-                dicom, pixels, padding_location, intercept = self.__read_CT(file_path)
-
-                if scale == 2:
-                    sr_pixels = self.__run_network(self.model_ct_x2, pixels)
-                elif scale == 4:
-                    sr_pixels = self.__run_network(self.model_ct_x4, pixels)
-                else:
-                    raise ValueError(f"Scale {scale} not supported!")
-                sr_pixels = self.__inverse_CT_value(sr_pixels, intercept=intercept, scale=scale,
-                                                    padding_location=padding_location)
-
-            elif img_type == 'MRI':
-                dicom, pixels = self.__read_MRI(file_path)
-                if scale == 2:
-                    sr_pixels = self.__run_network(self.model_mri_x2, pixels)
-                elif scale == 4:
-                    sr_pixels = self.__run_network(self.model_mri_x4, pixels)
-                else:
-                    raise ValueError(f"Scale {scale} not supported!")
-            else:
-                raise ValueError(f"Image type {img_type} not supported!")
-
-            dicom.PixelData = np.array(sr_pixels, np.int16).tobytes()
-            dicom.Rows = int(dicom.Rows * int(scale))
-            dicom.Columns = int(dicom.Columns * int(scale))
+            pixels = self.__read_CT(file_path)
+            segmentation = self.__run_network(self.model_seg_resnet, pixels)
 
             # plt.subplot(1, 2, 1)
             # plt.imshow(pixels, cmap='gray')
             # plt.subplot(1, 2, 2)
-            # plt.imshow(sr_pixels, cmap='gray')
+            # plt.imshow(segmentation, cmap='gray')
             # plt.show()
+            return segmentation
         except Exception as ex:
             print(ex)
             self.__shown_text = "An exception occurred!"
 
-        return dicom
-
-    def __process(self, input_dir: str, output_dir: str, scale: int, img_type: str):
+    def __process(self, input_dir: str, output_dir: str):
         try:
             file_paths = glob.glob(os.path.join(input_dir, '*'))
             self.__num_of_processing_images = len(file_paths)
             for file_path in file_paths:
-                dicom = self.run_sr(file_path, scale=scale, img_type=img_type)
-                path_to_save = os.path.join(output_dir, os.path.split(file_path)[-1])
-                dicom.save_as(path_to_save)
+                segmentation_as_img = self.run_seg(file_path)
+                import pdb; pdb.set_trace()
+                path_to_save = os.path.join(output_dir, Path(Path(file_path).parts[-1]).with_suffix(".png"))
+                cv.imwrite(path_to_save, segmentation_as_img)
                 self.counter += 1
 
             self.__shown_text = f"Results saved at: {output_dir}"
@@ -214,7 +178,5 @@ class SuperResolutionWindow:
         self.button_start_processing.config(state='disabled')
 
         self.processing_thread = threading.Thread(target=self.__process,
-                                                  args=(input_dir, save_dir,
-                                                        int(self.resolution_scale.get()),
-                                                        self.img_type.get(), ), daemon=True)
+                                                  args=(input_dir, save_dir, ), daemon=True)
         self.processing_thread.start()
