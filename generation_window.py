@@ -135,11 +135,6 @@ class GenerationWindow:
             output = self.__run_network(model, pixels)
 
             sr_pixels = self.__inverse_CT_value(output, intercept=intercept, padding_location=padding_location)
-            # plt.subplot(1, 2, 1)
-            # plt.imshow(pixels, cmap='gray')
-            # plt.subplot(1, 2, 2)
-            # plt.imshow(sr_pixels, cmap='gray')
-            # plt.show()
             dicom.PixelData = np.array(sr_pixels, np.int16).tobytes()
             dicom.Rows = int(dicom.Rows)
             dicom.Columns = int(dicom.Columns)
