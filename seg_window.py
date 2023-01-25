@@ -1,4 +1,4 @@
-from tkinter import Tk, Label, Button, StringVar, Radiobutton, filedialog
+from tkinter import Tk, Label, StringVar, filedialog
 from tkinter import ttk
 from tkinter import messagebox
 import threading
@@ -26,7 +26,7 @@ class SegmentationWindow:
         self.settings_window_created = False
 
         self.window.title(window_title)
-        self.window.minsize(700, 150)
+        self.window.minsize(1000, 150)
         self.window.resizable(False, False)
 
         # Folder input folder.
@@ -35,27 +35,27 @@ class SegmentationWindow:
         self.label_folder_imgs_path = Label(window, text="", fg="black")
         self.label_folder_imgs_path.place(relx=0.35, rely=0.06)
         fct_folder_imgs = partial(self.select_folder, self.label_folder_imgs_path)
-        self.button_folder = Button(window, text="Browse folder", command=fct_folder_imgs)
+        self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
         self.button_folder.place(relx=0.05, rely=0.2)
 
         # Folder output folder.
         self.label_saving_folder = Label(window, text="Saving folder:", font='Arial 12')
-        self.label_saving_folder.place(relx=0.05, rely=0.35)
+        self.label_saving_folder.place(relx=0.05, rely=0.38)
         self.label_saving_folder_path = Label(window, text="")
-        self.label_saving_folder_path.place(relx=0.35, rely=0.36)
+        self.label_saving_folder_path.place(relx=0.35, rely=0.38)
         fct_folder_save = partial(self.select_folder, self.label_saving_folder_path)
-        self.button_saving_folder = Button(window, text="Browse folder", command=fct_folder_save)
-        self.button_saving_folder.place(relx=0.05, rely=0.51)
+        self.button_saving_folder = ttk.Button(window, text="Browse folder", command=fct_folder_save)
+        self.button_saving_folder.place(relx=0.05, rely=0.53)
 
         self.counter = 0
         self.processing_thread = None
 
         self.label_processing = Label(window, text="",  fg="black")
-        self.label_processing.place(relx=0.42, rely=0.7)
+        self.label_processing.place(relx=0.35, rely=0.7)
 
-        self.button_start_processing = Button(window, text="Start process", font='Arial 11',
-                                                      command=self.__start_processing)
-        self.button_start_processing.place(relx=0.3, rely=0.75)
+        self.button_start_processing = ttk.Button(window, text="Start process",
+                                                  command=self.__start_processing)
+        self.button_start_processing.place(relx=0.05, rely=0.75)
         self.stop_thread = False
         self.__shown_text = ""
         self.__num_of_processing_images = 0
@@ -69,6 +69,7 @@ class SegmentationWindow:
         # load network in memory
         self.model_seg_resnet = onnxruntime.InferenceSession(os.path.join("resources_sr", "segmentation_resnet.onnx"))
 
+        self.window.iconbitmap('elo-hyp_logo.ico')
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):
@@ -138,7 +139,7 @@ class SegmentationWindow:
             # plt.subplot(1, 2, 1)
             # plt.imshow(pixels, cmap='gray')
             # plt.subplot(1, 2, 2)
-            # plt.imshow(segmentation, cmap='gray')
+            # plt.imshow(segmentation)
             # plt.show()
             return segmentation
         except Exception as ex:
@@ -150,11 +151,17 @@ class SegmentationWindow:
             file_paths = glob.glob(os.path.join(input_dir, '*'))
             self.__num_of_processing_images = len(file_paths)
             for file_path in file_paths:
-                segmentation_as_img = self.run_seg(file_path)
-                import pdb; pdb.set_trace()
-                path_to_save = os.path.join(output_dir, Path(Path(file_path).parts[-1]).with_suffix(".png"))
-                cv.imwrite(path_to_save, segmentation_as_img)
-                self.counter += 1
+                try:
+                    if os.path.isdir(file_path):
+                        continue
+                    segmentation_as_img = self.run_seg(file_path)
+                    path_to_save = os.path.join(output_dir, Path(Path(file_path).parts[-1]).with_suffix(".png"))
+                    cv.imwrite(path_to_save, segmentation_as_img)
+                    self.counter += 1
+
+                except Exception as ex:
+                    print(ex)
+                    self.__shown_text = "An exception occurred!"
 
             self.__shown_text = f"Results saved at: {output_dir}"
             self.button_start_processing.config(state='normal')

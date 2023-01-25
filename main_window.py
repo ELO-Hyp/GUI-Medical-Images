@@ -5,14 +5,30 @@ from generation_window import GenerationWindow
 from registration_window import RegistrationWindow
 from sr_window import SuperResolutionWindow
 from seg_window import SegmentationWindow
+from PIL import ImageTk, Image
+import os
 
 
 class MainWindow:
     def __init__(self, root, name):
         self.root = root
+        self.root.title(name)
+
+        # Set theme.
+        self.root.tk.call("source", os.path.join("resources", "UI", "sun-valley.tcl"))
+        self.root.tk.call("set_theme", "light")
 
         # Set the geometry of tkinter frame
-        self.root.geometry("750x250")
+        self.root.geometry("350x350")
+
+        # Add image logo.
+        image1 = Image.open("elo-hyp_logo.png").resize((100, 100))
+        test = ImageTk.PhotoImage(image1)
+
+        label1 = tk.Label(image=test)
+        label1.image = test
+        # Position image
+        label1.pack()
 
         # Create button for the SR
         ttk.Button(self.root, text="Super-Resolution", command=self.__get_sr_window).pack()
@@ -22,7 +38,9 @@ class MainWindow:
 
         ttk.Button(self.root, text="Contrast-Generation", command=self.__get_generation_window).pack()
 
-        ttk.Button(self.root, text="CT Alignment", command=self.__get_registration_window()).pack()
+        ttk.Button(self.root, text="CT Alignment", command=self.__get_registration_window).pack()
+
+        self.root.iconbitmap('elo-hyp_logo.ico')
 
         self.root.mainloop()
 

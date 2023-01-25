@@ -2,8 +2,9 @@ import glob
 import os
 import threading
 from functools import partial
-from tkinter import Label, Button, StringVar, Radiobutton, filedialog
+from tkinter import Label, StringVar, filedialog
 from tkinter import messagebox
+from tkinter import ttk
 
 import numpy as np
 import onnxruntime
@@ -32,8 +33,8 @@ class RegistrationWindow:
         value_scale_dict = {"Arterial to Native": "model_art2nat", "Venous to Native": "model_ven2nat"}
         for (text, value) in value_scale_dict.items():
             iter += 0.1
-            Radiobutton(window, text=text, variable=self.model_name,
-                        value=value).place(relx=0.5, rely=0.05 + iter)
+            ttk.Radiobutton(window, text=text, variable=self.model_name,
+                            value=value).place(relx=0.5, rely=0.05 + iter)
 
         # Folder input native folder.
         self.native_folder_imgs = Label(window, text="Processing folder with NATIVE scans:", fg="black", font='Arial 12')
@@ -41,7 +42,7 @@ class RegistrationWindow:
         self.native_folder_imgs_path = Label(window, text="", fg="black")
         self.native_folder_imgs_path.place(relx=0.05, rely=0.20)
         fct_folder_imgs = partial(self.select_folder, self.native_folder_imgs_path)
-        self.button_folder = Button(window, text="Browse folder", command=fct_folder_imgs)
+        self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
         self.button_folder.place(relx=0.05, rely=0.12)
 
         # Folder input contrast folder.
@@ -50,7 +51,7 @@ class RegistrationWindow:
         self.contrast_folder_imgs_path = Label(window, text="", fg="black")
         self.contrast_folder_imgs_path.place(relx=0.05, rely=0.42)
         fct_folder_imgs = partial(self.select_folder, self.contrast_folder_imgs_path)
-        self.button_folder = Button(window, text="Browse folder", command=fct_folder_imgs)
+        self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
         self.button_folder.place(relx=0.05, rely=0.33)
 
         # Folder output folder.
@@ -59,7 +60,7 @@ class RegistrationWindow:
         self.label_saving_folder_path = Label(window, text="")
         self.label_saving_folder_path.place(relx=0.05, rely=0.69)
         fct_folder_save = partial(self.select_folder, self.label_saving_folder_path)
-        self.button_saving_folder = Button(window, text="Browse folder", command=fct_folder_save)
+        self.button_saving_folder = ttk.Button(window, text="Browse folder", command=fct_folder_save)
         self.button_saving_folder.place(relx=0.05, rely=0.59)
 
         self.counter = 0
@@ -68,8 +69,8 @@ class RegistrationWindow:
         self.label_processing = Label(window, text="",  fg="black")
         self.label_processing.place(relx=0.42, rely=0.86)
 
-        self.button_start_processing = Button(window, text="Start process", font='Arial 11',
-                                              command=self.__start_processing)
+        self.button_start_processing = ttk.Button(window, text="Start process",
+                                                  command=self.__start_processing)
         self.button_start_processing.place(relx=0.3, rely=0.85)
         self.stop_thread = False
         self.__shown_text = ""
@@ -90,6 +91,7 @@ class RegistrationWindow:
         self.model_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "registration.onnx"))
         self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "registration.onnx"))
 
+        self.window.iconbitmap('elo-hyp_logo.ico')
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):
@@ -141,6 +143,8 @@ class RegistrationWindow:
     def read_scan(self, file_paths: list):
         slices = []
         for file_path in file_paths:
+            if os.path.isdir(file_path) is True:
+                continue
             try:
                 dicom, pixels, padding_location, intercept = self.__read_CT(file_path)
                 slices.append(pixels)
