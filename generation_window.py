@@ -76,9 +76,9 @@ class GenerationWindow:
 
         # load network in memory
         self.model_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
-        self.model_nat2art = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
-        self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
-        self.model_nat2ven = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
+        self.model_nat2art = onnxruntime.InferenceSession(os.path.join("resources_gen", "nat2art.onnx"))
+        self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "ven2nat.onnx"))
+        self.model_nat2ven = onnxruntime.InferenceSession(os.path.join("resources_gen", "nat2ven.onnx"))
 
         self.window.iconbitmap('elo-hyp_logo.ico')
         self.window.protocol("WM_DELETE_WINDOW", on_closing)

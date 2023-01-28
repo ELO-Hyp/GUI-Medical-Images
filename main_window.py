@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from generation_window import GenerationWindow
+from registration_contrast_window import RegistrationTransferWindow
 from registration_window import RegistrationWindow
 from sr_window import SuperResolutionWindow
 from seg_window import SegmentationWindow
@@ -40,8 +41,10 @@ class MainWindow:
 
         ttk.Button(self.root, text="CT Alignment", command=self.__get_registration_window).pack()
 
-        self.root.iconbitmap('elo-hyp_logo.ico')
+        ttk.Button(self.root, text="CT Alignment with Contrast Transfer",
+                   command=self.__get_registration_transfer_window).pack()
 
+        self.root.iconbitmap('elo-hyp_logo.ico')
         self.root.mainloop()
 
     def __get_sr_window(self):
@@ -59,3 +62,7 @@ class MainWindow:
     def __get_registration_window(self):
         """Create a new top level window"""
         self.contrast_generation_window = RegistrationWindow(tk.Toplevel(), "Registration")
+
+    def __get_registration_transfer_window(self):
+        """Create a new top level window"""
+        self.contrast_generation_with_transfer_window = RegistrationTransferWindow(tk.Toplevel(), "Registration-Transfer")

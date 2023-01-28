@@ -13,7 +13,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.ndimage import zoom
 
 
-class RegistrationWindow:
+class RegistrationTransferWindow:
     def __init__(self, window, window_title):
 
         self.window = window
@@ -30,7 +30,7 @@ class RegistrationWindow:
         self.label_scale.place(relx=0.5, rely=0.05)
         self.model_name = StringVar(window, "2")
         iter = 0
-        value_scale_dict = {"Arterial to Native": "model_art2nat", "Venous to Native": "model_ven2nat"}
+        value_scale_dict = {"Arterial to Native": "art2nat", "Venous to Native": "ven2nat"}
         for (text, value) in value_scale_dict.items():
             iter += 0.1
             ttk.Radiobutton(window, text=text, variable=self.model_name,
@@ -88,8 +88,12 @@ class RegistrationWindow:
         self.y_grid = np.linspace(0, self.scan_shape[1] - 1, self.scan_shape[1])
         self.z_grid = np.linspace(0, self.scan_shape[2] - 1, self.scan_shape[2])
 
-        self.model_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "registration_classic_art2nat.onnx"))
-        self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "registration_classic_ven2nat.onnx"))
+        self.model_gen_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
+        self.model_gen_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "ven2nat.onnx"))
+        self.model_registration_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen",
+                                                                                    "registration_cycle_art2nat.onnx"))
+        self.model_registration_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen",
+                                                                                    "registration_cycle_ven2nat.onnx"))
 
         self.window.iconbitmap('elo-hyp_logo.ico')
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
@@ -155,8 +159,24 @@ class RegistrationWindow:
 
         return np.stack(slices)
 
-    def run_registrantion(self, product_contrast: np.array, product_native: np.array, model_name: str):
-        model = self.__getattribute__(model_name)
+    def run_generation(self, product_contrast, model_name):
+        model = self.__getattribute__("model_gen_" + model_name)
+
+        outputs = []
+        for i in range(0, len(product_contrast)):
+            lr = np.expand_dims(product_contrast[i], axis=(0, 1))
+
+            lr = np.float32(lr)
+            # compute ONNX Runtime output prediction
+            ort_inputs = {model.get_inputs()[0].name: lr}
+            ort_outs = model.run(None, ort_inputs)
+            outputs.append(ort_outs[0][0, 0])
+
+        return np.stack(outputs)
+
+    def run_registrantion(self, product_contrast: np.array, product_contrast_transferred: np.array,
+                          product_native: np.array, model_name: str):
+        model = self.__getattribute__("model_registration_" + model_name)
 
         # Data sanity check
         if product_contrast.shape[0] != product_native.shape[0]:
@@ -167,6 +187,10 @@ class RegistrationWindow:
                                                np.zeros((self.scan_shape[0] - no_slices,
                                                          self.scan_shape[1],
                                                          self.scan_shape[2]))), 0)
+            product_contrast_transferred = np.concatenate((product_contrast_transferred,
+                                                           np.zeros((self.scan_shape[0] - no_slices,
+                                                                     self.scan_shape[1],
+                                                                     self.scan_shape[2]))), 0)
             product_native = np.concatenate((product_native,
                                              np.zeros((self.scan_shape[0] - no_slices,
                                                        self.scan_shape[1],
@@ -174,13 +198,16 @@ class RegistrationWindow:
 
         if no_slices > self.scan_shape[0]:
             product_contrast = product_contrast[:self.scan_shape[0]]
+            product_contrast_transferred = product_contrast_transferred[:self.scan_shape[0]]
             product_native = product_native[:self.scan_shape[0]]
 
         # Downscale by 2 the input data
-        product_contrast_ = zoom(product_contrast, 0.5)
-        product_native_ = zoom(product_native, 0.5)
+        product_contrast_in = zoom(product_contrast, 0.5)
+        product_contrast_transferred = zoom(product_contrast_transferred, 0.5)
+        product_native = zoom(product_native, 0.5)
 
-        input_prod = np.expand_dims(np.stack((product_contrast_, product_native_)), 0).astype(np.float32)
+        input_prod = np.expand_dims(np.stack((product_contrast_in, product_contrast_transferred, product_native
+                                              )), 0).astype(np.float32)
         ort_inputs = {model.get_inputs()[0].name: input_prod}
         ort_outs = model.run(None, ort_inputs)[0][0]
 
@@ -202,7 +229,9 @@ class RegistrationWindow:
         try:
             product_native = self.read_scan(glob.glob(os.path.join(input_dir_native, '*')))
             product_contrast = self.read_scan(glob.glob(os.path.join(input_dir_contrast, '*')))
-            aligned_contrast = self.run_registrantion(product_contrast, product_native, model_name)
+            product_contrast_transferred = self.run_generation(product_contrast, model_name)
+            aligned_contrast = self.run_registrantion(product_contrast, product_contrast_transferred,
+                                                      product_native, model_name)
             aligned_contrast = self.__inverse_CT_value(aligned_contrast)
 
             self.save_aligned_scan(output_dir, glob.glob(os.path.join(input_dir_native, '*')), aligned_contrast)
