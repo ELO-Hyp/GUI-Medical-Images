@@ -67,9 +67,10 @@ class SegmentationWindow:
             self.window.destroy()
 
         # load network in memory
-        self.model_seg_resnet = onnxruntime.InferenceSession(os.path.join("resources_sr", "segmentation_resnet.onnx"))
+        self.model_seg_resnet = onnxruntime.InferenceSession(os.path.join("resources",
+                                                                          "resources_sr", "segmentation_resnet.onnx"))
 
-        self.window.iconbitmap('elo-hyp_logo.ico')
+        self.window.iconbitmap(os.path.join("resources", 'elo-hyp_logo.ico'))
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):
@@ -136,11 +137,19 @@ class SegmentationWindow:
             pixels = self.__read_CT(file_path)
             segmentation = self.__run_network(self.model_seg_resnet, pixels)
 
+            # Impose segmentation.
+            pixels_with_channels = np.dstack((pixels, pixels, pixels))
+            pixels_with_channels = np.float32(pixels_with_channels) / pixels_with_channels.max()
+            segmentation = np.float32(segmentation) / 255.0
+            segmentation = cv.addWeighted(pixels_with_channels, 0.5, segmentation, 0.5, 0)
+            segmentation = np.uint8(segmentation * 255)
+
             # plt.subplot(1, 2, 1)
             # plt.imshow(pixels, cmap='gray')
             # plt.subplot(1, 2, 2)
             # plt.imshow(segmentation)
             # plt.show()
+
             return segmentation
         except Exception as ex:
             print(ex)

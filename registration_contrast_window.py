@@ -71,7 +71,7 @@ class RegistrationTransferWindow:
 
         self.button_start_processing = ttk.Button(window, text="Start process",
                                                   command=self.__start_processing)
-        self.button_start_processing.place(relx=0.3, rely=0.85)
+        self.button_start_processing.place(relx=0.05, rely=0.85)
         self.stop_thread = False
         self.__shown_text = ""
         self.__num_of_processing_images = 0
@@ -88,14 +88,14 @@ class RegistrationTransferWindow:
         self.y_grid = np.linspace(0, self.scan_shape[1] - 1, self.scan_shape[1])
         self.z_grid = np.linspace(0, self.scan_shape[2] - 1, self.scan_shape[2])
 
-        self.model_gen_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
-        self.model_gen_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "ven2nat.onnx"))
-        self.model_registration_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen",
+        self.model_gen_art2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "art2nat.onnx"))
+        self.model_gen_ven2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "ven2nat.onnx"))
+        self.model_registration_art2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen",
                                                                                     "registration_cycle_art2nat.onnx"))
-        self.model_registration_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen",
+        self.model_registration_ven2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen",
                                                                                     "registration_cycle_ven2nat.onnx"))
 
-        self.window.iconbitmap('elo-hyp_logo.ico')
+        self.window.iconbitmap(os.path.join("resources", 'elo-hyp_logo.ico'))
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):

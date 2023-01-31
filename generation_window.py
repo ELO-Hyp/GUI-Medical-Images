@@ -63,7 +63,7 @@ class GenerationWindow:
 
         self.button_start_processing = ttk.Button(window, text="Start process",
                                                   command=self.__start_processing)
-        self.button_start_processing.place(relx=0.3, rely=0.85)
+        self.button_start_processing.place(relx=0.05, rely=0.85)
         self.stop_thread = False
         self.__shown_text = ""
         self.__num_of_processing_images = 0
@@ -75,12 +75,12 @@ class GenerationWindow:
             self.window.destroy()
 
         # load network in memory
-        self.model_art2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "art2nat.onnx"))
-        self.model_nat2art = onnxruntime.InferenceSession(os.path.join("resources_gen", "nat2art.onnx"))
-        self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources_gen", "ven2nat.onnx"))
-        self.model_nat2ven = onnxruntime.InferenceSession(os.path.join("resources_gen", "nat2ven.onnx"))
+        self.model_art2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "art2nat.onnx"))
+        self.model_nat2art = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "nat2art.onnx"))
+        self.model_ven2nat = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "ven2nat.onnx"))
+        self.model_nat2ven = onnxruntime.InferenceSession(os.path.join("resources", "resources_gen", "nat2ven.onnx"))
 
-        self.window.iconbitmap('elo-hyp_logo.ico')
+        self.window.iconbitmap(os.path.join("resources", 'elo-hyp_logo.ico'))
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):

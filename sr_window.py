@@ -85,12 +85,12 @@ class SuperResolutionWindow:
             self.window.destroy()
 
         # load network in memory
-        self.model_ct_x2 = onnxruntime.InferenceSession(os.path.join("resources_sr", "CT_x2_single.onnx"))
-        self.model_ct_x4 = onnxruntime.InferenceSession(os.path.join("resources_sr", "CT_x4_single.onnx"))
-        self.model_mri_x2 = onnxruntime.InferenceSession(os.path.join("resources_sr", "MRI_x2_single.onnx"))
-        self.model_mri_x4 = onnxruntime.InferenceSession(os.path.join("resources_sr", "MRI_x4_single.onnx"))
+        self.model_ct_x2 = onnxruntime.InferenceSession(os.path.join("resources", "resources_sr", "CT_x2_single.onnx"))
+        self.model_ct_x4 = onnxruntime.InferenceSession(os.path.join("resources", "resources_sr", "CT_x4_single.onnx"))
+        self.model_mri_x2 = onnxruntime.InferenceSession(os.path.join("resources", "resources_sr", "MRI_x2_single.onnx"))
+        self.model_mri_x4 = onnxruntime.InferenceSession(os.path.join("resources", "resources_sr", "MRI_x4_single.onnx"))
 
-        self.window.iconbitmap('elo-hyp_logo.ico')
+        self.window.iconbitmap(os.path.join("resources", 'elo-hyp_logo.ico'))
         self.window.protocol("WM_DELETE_WINDOW", on_closing)
 
     def select_folder(self, storing_label):

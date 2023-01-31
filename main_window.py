@@ -21,9 +21,8 @@ class MainWindow:
 
         # Set the geometry of tkinter frame
         self.root.geometry("350x350")
-
         # Add image logo.
-        image1 = Image.open("elo-hyp_logo.png").resize((100, 100))
+        image1 = Image.open(os.path.join("resources", "elo-hyp_logo.png")).resize((100, 100))
         test = ImageTk.PhotoImage(image1)
 
         label1 = tk.Label(image=test)
@@ -44,7 +43,7 @@ class MainWindow:
         ttk.Button(self.root, text="CT Alignment with Contrast Transfer",
                    command=self.__get_registration_transfer_window).pack()
 
-        self.root.iconbitmap('elo-hyp_logo.ico')
+        self.root.iconbitmap(os.path.join("resources", 'elo-hyp_logo.ico'))
         self.root.mainloop()
 
     def __get_sr_window(self):
