@@ -8,3 +8,4 @@ if __name__ == "__main__":
     
     
 # pyinstaller app.py --onefile  -F --hiddenimport=pydicom.encoders.gdcm --hiddenimport=pydicom.encoders.pylibjpeg
+# Resources: https://drive.google.com/drive/folders/1ml7GpMM3j1XxB3X130G1zS3NF4ompakw?usp=sharing
