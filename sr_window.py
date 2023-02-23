@@ -12,6 +12,7 @@ import os
 import pydicom
 import pdb
 import matplotlib.pyplot as plt
+from skimage.transform import resize
 
 
 class SuperResolutionWindow:
@@ -21,7 +22,7 @@ class SuperResolutionWindow:
         self.window.grab_set()  # Make it the main window.
 
         self.window.title(window_title)
-        self.window.minsize(1000, 350)
+        self.window.minsize(700, 350)
         self.window.resizable(False, False)
 
         # Select SR scale.
@@ -32,7 +33,7 @@ class SuperResolutionWindow:
         iter = 0
         value_scale_dict = {"X2": 2, "X4": 4}
         for (text, value) in value_scale_dict.items():
-            iter += 0.05
+            iter += 0.1
             ttk.Radiobutton(window, text=text, variable=self.resolution_scale,
                             value=value).place(relx=0.2 + iter, rely=0.05)
 
@@ -43,7 +44,7 @@ class SuperResolutionWindow:
         iter = 0
         value_scale_dict = {"CT": "CT", "MRI": "MRI"}
         for (text, value) in value_scale_dict.items():
-            iter += 0.05
+            iter += 0.1
             ttk.Radiobutton(window, text=text, variable=self.img_type,
                             value=value).place(relx=0.2 + iter, rely=0.15)
 
@@ -51,7 +52,7 @@ class SuperResolutionWindow:
         self.label_folder_imgs = Label(window, text="Processing folder with scans:", fg="black", font='Arial 12')
         self.label_folder_imgs.place(relx=0.05, rely=0.25)
         self.label_folder_imgs_path = Label(window, text="", fg="black")
-        self.label_folder_imgs_path.place(relx=0.3, rely=0.25)
+        self.label_folder_imgs_path.place(relx=0.35, rely=0.25)
         fct_folder_imgs = partial(self.select_folder, self.label_folder_imgs_path)
         self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
         self.button_folder.place(relx=0.05, rely=0.32)
@@ -60,7 +61,7 @@ class SuperResolutionWindow:
         self.label_saving_folder = Label(window, text="Saving folder:", font='Arial 12')
         self.label_saving_folder.place(relx=0.05, rely=0.42)
         self.label_saving_folder_path = Label(window, text="")
-        self.label_saving_folder_path.place(relx=0.3, rely=0.42)
+        self.label_saving_folder_path.place(relx=0.35, rely=0.42)
         fct_folder_save = partial(self.select_folder, self.label_saving_folder_path)
         self.button_saving_folder = ttk.Button(window, text="Browse folder", command=fct_folder_save)
         self.button_saving_folder.place(relx=0.05, rely=0.5)
@@ -76,7 +77,11 @@ class SuperResolutionWindow:
         self.button_start_processing.place(relx=0.05, rely=0.85)
         self.stop_thread = False
         self.__shown_text = ""
+        self.__info_text = ""
         self.__num_of_processing_images = 0
+        self.label_info = Label(window, text="",  fg="black")
+        self.label_info.place(relx=0.3, rely=0.93)
+
         self.__update()
 
         def on_closing():
@@ -105,6 +110,7 @@ class SuperResolutionWindow:
         else:
             self.label_processing.configure(text=self.__shown_text)
 
+        self.label_info.configure(text=self.__info_text)
         self.window.after(1000, self.__update)
 
     def __run_network(self, model, img):
@@ -147,6 +153,14 @@ class SuperResolutionWindow:
             if img_type == 'CT':
                 dicom, pixels, padding_location, intercept = self.__read_CT(file_path)
 
+                if pixels.shape != (512, 512):
+                    dicom.Rows = 512
+                    dicom.Columns = 512
+                    pixels = resize(pixels, (512, 512), order=3)
+                    self.__info_text = "The image size must be 512x512. Resized was performed!"
+                else:
+                    self.__info_text = ""
+
                 if scale == 2:
                     sr_pixels = self.__run_network(self.model_ct_x2, pixels)
                 elif scale == 4:
@@ -179,7 +193,7 @@ class SuperResolutionWindow:
         except Exception as ex:
             print(ex)
             self.__shown_text = "An exception occurred!"
-
+            return None
         return dicom
 
     def __process(self, input_dir: str, output_dir: str, scale: int, img_type: str):
@@ -191,6 +205,8 @@ class SuperResolutionWindow:
                     continue
                 try:
                     dicom = self.run_sr(file_path, scale=scale, img_type=img_type)
+                    if dicom is None:
+                        continue
                     path_to_save = os.path.join(output_dir, os.path.split(file_path)[-1])
                     dicom.save_as(path_to_save)
                     self.counter += 1

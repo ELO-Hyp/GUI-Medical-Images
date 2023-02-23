@@ -23,45 +23,45 @@ class RegistrationTransferWindow:
         self.settings_window_created = False
 
         self.window.title(window_title)
-        self.window.minsize(1000, 350)
+        self.window.minsize(700, 350)
         self.window.resizable(False, False)
 
         self.label_scale = Label(window, text="Select registration mode:", font='Arial 12')
-        self.label_scale.place(relx=0.5, rely=0.05)
+        self.label_scale.place(relx=0.7, rely=0.05)
         self.model_name = StringVar(window, "2")
         iter = 0
         value_scale_dict = {"Arterial to Native": "art2nat", "Venous to Native": "ven2nat"}
         for (text, value) in value_scale_dict.items():
             iter += 0.1
             ttk.Radiobutton(window, text=text, variable=self.model_name,
-                            value=value).place(relx=0.5, rely=0.05 + iter)
+                            value=value).place(relx=0.7, rely=0.05 + iter)
 
         # Folder input native folder.
         self.native_folder_imgs = Label(window, text="Processing folder with NATIVE scans:", fg="black", font='Arial 12')
         self.native_folder_imgs.place(relx=0.05, rely=0.05)
         self.native_folder_imgs_path = Label(window, text="", fg="black")
-        self.native_folder_imgs_path.place(relx=0.05, rely=0.20)
+        self.native_folder_imgs_path.place(relx=0.05, rely=0.11)
         fct_folder_imgs = partial(self.select_folder, self.native_folder_imgs_path)
         self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
-        self.button_folder.place(relx=0.05, rely=0.12)
+        self.button_folder.place(relx=0.05, rely=0.18)
 
         # Folder input contrast folder.
         self.contrast_folder_imgs = Label(window, text="Processing folder with CONTRAST scans:", fg="black", font='Arial 12')
-        self.contrast_folder_imgs.place(relx=0.05, rely=0.25)
+        self.contrast_folder_imgs.place(relx=0.05, rely=0.28)
         self.contrast_folder_imgs_path = Label(window, text="", fg="black")
-        self.contrast_folder_imgs_path.place(relx=0.05, rely=0.42)
+        self.contrast_folder_imgs_path.place(relx=0.05, rely=0.34)
         fct_folder_imgs = partial(self.select_folder, self.contrast_folder_imgs_path)
         self.button_folder = ttk.Button(window, text="Browse folder", command=fct_folder_imgs)
-        self.button_folder.place(relx=0.05, rely=0.33)
+        self.button_folder.place(relx=0.05, rely=0.41)
 
         # Folder output folder.
         self.label_saving_folder = Label(window, text="Saving folder:", font='Arial 12')
-        self.label_saving_folder.place(relx=0.05, rely=0.50)
+        self.label_saving_folder.place(relx=0.05, rely=0.51)
         self.label_saving_folder_path = Label(window, text="")
-        self.label_saving_folder_path.place(relx=0.05, rely=0.69)
+        self.label_saving_folder_path.place(relx=0.05, rely=0.57)
         fct_folder_save = partial(self.select_folder, self.label_saving_folder_path)
         self.button_saving_folder = ttk.Button(window, text="Browse folder", command=fct_folder_save)
-        self.button_saving_folder.place(relx=0.05, rely=0.59)
+        self.button_saving_folder.place(relx=0.05, rely=0.64)
 
         self.counter = 0
         self.processing_thread = None
@@ -106,7 +106,7 @@ class RegistrationTransferWindow:
         if self.processing_thread is None:
             self.label_processing.configure(text=self.__shown_text)
         elif self.processing_thread.is_alive():
-            self.label_processing.configure(text=f"Processing: {self.counter}/{self.__num_of_processing_images}.")
+            self.label_processing.configure(text=f"Processing...")
         else:
             self.label_processing.configure(text=self.__shown_text)
 

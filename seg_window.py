@@ -26,7 +26,7 @@ class SegmentationWindow:
         self.settings_window_created = False
 
         self.window.title(window_title)
-        self.window.minsize(1000, 150)
+        self.window.minsize(700, 150)
         self.window.resizable(False, False)
 
         # Folder input folder.
@@ -88,7 +88,17 @@ class SegmentationWindow:
         self.window.after(1000, self.__update)
 
     def get_img_from_pixels(self, pixels):
-        pixels = cv.resize(pixels, (300, 300))
+
+        if pixels.shape[0] > 320:
+            top = int(np.ceil((pixels.shape[0] - 320) / 2))
+            bottom = pixels.shape[0] - int(np.floor((pixels.shape[0] - 320) / 2))
+            pixels = pixels[top:bottom, :]
+
+        if pixels.shape[1] > 384:
+            left = int(np.ceil((pixels.shape[1] - 384) / 2))
+            right = pixels.shape[1] - int(np.floor((pixels.shape[1] - 384) / 2))
+            pixels = pixels[:, left:right]
+
         shape0 = np.array(pixels.shape[:2])
         resize = np.array([320, 384])
         if np.any(shape0 != resize):
@@ -105,8 +115,8 @@ class SegmentationWindow:
         img = img.transpose((2, 0, 1))
         return img
 
-    def __run_network(self, model, pixels):
-        img = self.get_img_from_pixels(pixels)
+    def __run_network(self, model, img):
+
         lr = np.expand_dims(img, axis=(0))
 
         lr = np.float32(lr)
@@ -135,14 +145,20 @@ class SegmentationWindow:
     def run_seg(self, file_path: str):
         try:
             pixels = self.__read_CT(file_path)
+            pixels = self.get_img_from_pixels(pixels)
             segmentation = self.__run_network(self.model_seg_resnet, pixels)
-
-            # Impose segmentation.
-            pixels_with_channels = np.dstack((pixels, pixels, pixels))
-            pixels_with_channels = np.float32(pixels_with_channels) / pixels_with_channels.max()
+            pixels = np.transpose(pixels, (1, 2, 0))
             segmentation = np.float32(segmentation) / 255.0
-            segmentation = cv.addWeighted(pixels_with_channels, 0.5, segmentation, 0.5, 0)
+            segmentation = cv.addWeighted(pixels, 0.5, segmentation, 0.5, 0)
             segmentation = np.uint8(segmentation * 255)
+
+            cv.rectangle(segmentation, (0, 0), (120, 80), (255, 255, 255), -1)
+            cv.rectangle(segmentation, (5, 5), (15, 15), (255, 0, 0), -1)
+            cv.putText(segmentation, 'Stomach', (16, 16), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv.rectangle(segmentation, (5, 30), (15, 40), (0, 0, 255), -1)
+            cv.putText(segmentation, 'Large bowel', (16, 41), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv.rectangle(segmentation, (5, 55), (15, 65), (0, 255, 0), -1)
+            cv.putText(segmentation, 'Small bowel', (16, 66), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
             # plt.subplot(1, 2, 1)
             # plt.imshow(pixels, cmap='gray')
