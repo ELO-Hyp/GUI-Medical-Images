@@ -144,13 +144,17 @@ class SegmentationWindow:
 
     def run_seg(self, file_path: str):
         try:
+
             pixels = self.__read_CT(file_path)
+
             pixels = self.get_img_from_pixels(pixels)
             segmentation = self.__run_network(self.model_seg_resnet, pixels)
             pixels = np.transpose(pixels, (1, 2, 0))
             segmentation = np.float32(segmentation) / 255.0
             segmentation = cv.addWeighted(pixels, 0.5, segmentation, 0.5, 0)
             segmentation = np.uint8(segmentation * 255)
+
+            segmentation = np.concatenate((np.zeros((segmentation.shape[0], 100, 3)), segmentation), axis=1)
 
             cv.rectangle(segmentation, (0, 0), (120, 80), (255, 255, 255), -1)
             cv.rectangle(segmentation, (5, 5), (15, 15), (255, 0, 0), -1)
@@ -168,7 +172,7 @@ class SegmentationWindow:
 
             return segmentation
         except Exception as ex:
-            print(ex)
+            print(file_path, ex)
             self.__shown_text = "An exception occurred!"
 
     def __process(self, input_dir: str, output_dir: str):
